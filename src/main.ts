@@ -1,9 +1,16 @@
 import { log } from './log';
-import { env } from './env';
+
+import { CommandDispatcher } from 'ts-commands';
 
 /**
  * Start your application in the main() function
  */
 export async function main(): Promise<void> {
-	log.info('Hello ' + env.APP_TITLE + ' (' + env.NODE_ENV + ')');
+	log.info('{{ remrg:var project-name }}\n');
+
+	new CommandDispatcher({
+		commands: [
+			// {{ remrg:task Add Command classes here }}
+		],
+	}).run();
 }

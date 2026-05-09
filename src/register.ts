@@ -6,8 +6,6 @@ import { log } from './log';
  * Initialize & register your app's services here
  */
 export async function register(): Promise<void> {
-	log.info('Booting...');
-
 	// Register services here
 }
 
@@ -15,7 +13,5 @@ export async function register(): Promise<void> {
  * Teardown services here
  */
 export async function teardown(): Promise<void> {
-	log.info('Tearing down...');
-
 	// Teardown services here
 }

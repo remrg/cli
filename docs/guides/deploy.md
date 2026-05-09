@@ -1,3 +1,9 @@
 # Deployment Guide
 
-{{ remrg:task Write a deployment guide }}
+## Local
+
+Run `npm run build`, then run `npm i -g .`
+
+## Publishing to npm
+
+Run `npm publish`.

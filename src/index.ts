@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 /**
  * This file is the main entrypoint for your application.
  */
