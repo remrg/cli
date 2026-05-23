@@ -5,7 +5,7 @@
 	"author": "remrg",
 	"license": "AGPL",
 	"bin": {
-		"remrg-cli": "dist/src/index.js"
+		"remrg": "dist/src/index.js"
 	},
 	"scripts": {
 		"start": "node dist/src/index.js",
@@ -30,6 +30,7 @@
 		"ts-async-bootstrap": "^2.1.0",
 		"ts-commands": "^2.0.3",
 		"ts-error-handler": "^1.0.2",
+		"ts-script": "^1.0.0",
 		"ts-tiny-log": "^1.1.1"
 	},
 	"devDependencies": {

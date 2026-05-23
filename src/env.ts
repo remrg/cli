@@ -5,6 +5,9 @@ import { AppConfig, configure } from 'ts-appconfig';
  */
 export class Environment extends AppConfig {
 	readonly APP_TITLE = 'remrg-cli';
+
+	readonly REMRG_HOST = 'github';
+	readonly REMRG_GITHUB_ORG = 'remrg';
 }
 
 /**

@@ -1,5 +1,3 @@
-import { log } from './log';
-
 // {{ remrg:task Start-up and tear-down services for your app }}
 
 /**
