@@ -1,11 +1,11 @@
 {
-	"name": "{{ remrg:var project-name }}",
+	"name": "remrg-cli",
 	"version": "1.0.0",
 	"description": "",
-	"author": "{{ remrg:var organization }}",
-	"license": "{{ remrg:var license }}",
+	"author": "remrg",
+	"license": "AGPL",
 	"bin": {
-		"{{ remrg:var project-name }}": "dist/src/index.js"
+		"remrg-cli": "dist/src/index.js"
 	},
 	"scripts": {
 		"start": "node dist/src/index.js",

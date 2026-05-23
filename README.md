@@ -1,4 +1,4 @@
-# {{ remrg:var project-name }}
+# remrg-cli
 
 {{ remrg:task Write a brief project description }}
 
@@ -7,15 +7,15 @@
 Install the package via npm:
 
 ```bash
-npm install {{ remrg:var project-name }}
+npm install remrg-cli
 ```
 
 Or install globally:
 
 ```bash
-npm install -g {{ remrg:var project-name }}
+npm install -g remrg-cli
 ```
 
 ## License
 
-Licensed under the [{{ remrg:var license }}](LICENSE.md).
+Licensed under the [AGPL](LICENSE.md).
