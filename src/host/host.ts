@@ -1,9 +1,5 @@
-export interface HostTemplate {
-	name: string;
-	url: string;
-	branch: string;
-}
+import { Template } from '@/templates';
 
 export abstract class Host {
-	public abstract getTemplates(): Promise<HostTemplate[]>;
+	public abstract getTemplates(): Promise<Template[]>;
 }

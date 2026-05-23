@@ -1,7 +1,7 @@
+import { Template } from '@/templates/template';
 import { getHost } from './get-host';
-import { HostTemplate } from './host';
 
-const cache: Record<string, HostTemplate> = {};
+const cache: Record<string, Template> = {};
 
 export async function initializeCache(): Promise<void> {
 	const host = await getHost();
@@ -13,18 +13,18 @@ export function getCachedTemplateNames(): string[] {
 	return Object.keys(cache);
 }
 
-export function getCachedTemplates(): HostTemplate[] {
+export function getCachedTemplates(): Template[] {
 	return Object.values(cache);
 }
 
-export function getCachedTemplate(name: string): HostTemplate | undefined {
+export function getCachedTemplate(name: string): Template | undefined {
 	return cache[name];
 }
 
 /**
  * @private
  */
-export function cacheTemplates(templates: HostTemplate[]) {
+export function cacheTemplates(templates: Template[]) {
 	for (const template of templates) {
 		cache[template.name] = template;
 	}

@@ -1,6 +1,7 @@
 import * as https from 'https';
 import { env } from '../../env';
-import { Host, HostTemplate } from '../host';
+import { Host } from '../host';
+import { Template } from '../../templates';
 
 interface GithubRepo {
 	name: string;
@@ -11,7 +12,7 @@ interface GithubRepo {
 export class GithubHost extends Host {
 	public org = env.REMRG_GITHUB_ORG;
 
-	public async getTemplates(): Promise<HostTemplate[]> {
+	public async getTemplates(): Promise<Template[]> {
 		return new Promise((resolve, reject) => {
 			https
 				.get(
@@ -37,11 +38,12 @@ export class GithubHost extends Host {
 							}
 							try {
 								const json = JSON.parse(data);
-								const mapped = json.map((repo: GithubRepo) => ({
+								const mapped: Template[] = json.map((repo: GithubRepo) => ({
 									name: repo.name,
 									url: repo.html_url,
 									branch: repo.default_branch,
 								}));
+
 								resolve(mapped);
 							}
 							catch (error) {
