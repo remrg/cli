@@ -9,8 +9,6 @@ import * as options from '../options';
 import { Command, CommandOption, ParsedArguments } from 'ts-commands';
 import { getCachedTemplate } from '../host';
 import { Template } from '../templates';
-import { writeFileSync } from 'fs';
-import { getTemplateYaml } from '../remrg/template-yaml';
 
 interface Args extends ParsedArguments {
 	// Positional
