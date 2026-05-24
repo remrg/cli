@@ -1,4 +1,4 @@
-import { Template } from '@/templates/template';
+import { Template } from '../templates/template';
 import { getHost } from './get-host';
 
 const cache: Record<string, Template> = {};

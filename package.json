@@ -26,9 +26,10 @@
 		"npm": ">=10.8.2"
 	},
 	"dependencies": {
+		"replace-in-file": "^8.4.0",
 		"ts-appconfig": "^1.2.0",
 		"ts-async-bootstrap": "^2.1.0",
-		"ts-commands": "^2.0.3",
+		"ts-commands": "^2.1.0",
 		"ts-error-handler": "^1.0.2",
 		"ts-script": "^1.0.0",
 		"ts-tiny-log": "^1.1.1"
@@ -45,6 +46,7 @@
 		"globals": "^17.6.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-brace-style": "^0.10.1",
+		"tslib": "^2.8.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.2"

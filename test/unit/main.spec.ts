@@ -14,13 +14,15 @@ vi.mock('../../src/log', () => ({
 	},
 }));
 
-vi.mock('ts-commands', () => {
+vi.mock('ts-commands', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('ts-commands')>();
 	const runMock = vi.fn();
 	const commandDispatcherMock = vi.fn(function (this: CommandDispatcher) {
 		this.run = runMock;
 		return this;
 	});
 	return {
+		...actual,
 		CommandDispatcher: commandDispatcherMock,
 	};
 });
@@ -32,6 +34,10 @@ vi.mock('../../src/host/get-host', () => ({
 vi.mock('../../src/host/template-cache', () => ({
 	initializeCache: vi.fn(),
 	getCachedTemplateNames: vi.fn(),
+}));
+
+vi.mock('../../src/commands', () => ({
+	commands: [],
 }));
 
 describe('main', () => {
@@ -57,9 +63,7 @@ describe('main', () => {
 
 		expect(initializeCache).toHaveBeenCalled();
 
-		expect(log.info).toHaveBeenCalledWith('Templates fetched successfully!\n', [
-			'test-template',
-		]);
+		expect(log.info).toHaveBeenCalledWith('Templates fetched successfully!\n');
 
 		expect(CommandDispatcher).toHaveBeenCalledWith({
 			commands: [],
