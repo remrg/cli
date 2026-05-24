@@ -8,6 +8,10 @@ remrg is an advanced CLI tool for scaffolding new projects from templates, seaml
 npm install -g @remrg/cli
 ```
 
+## Templates
+
+Browse all [official remrg templates](https://github.com/orgs/remrg-templates/repositories)
+
 ## Guides
 
 ### Create a project
@@ -23,7 +27,3 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 - `--verbose` Verbose logs
 - `--org` Specify the organization
 - `--license` Specify the license name
-
-#### Templates
-
-Browse all [official remrg templates](https://github.com/orgs/remrg-templates/repositories)
