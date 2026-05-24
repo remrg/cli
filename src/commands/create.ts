@@ -9,6 +9,8 @@ import * as options from '../options';
 import { Command, CommandOption, ParsedArguments } from 'ts-commands';
 import { getCachedTemplate } from '../host';
 import { Template } from '../templates';
+import { writeFileSync } from 'fs';
+import { getTemplateYaml } from '../remrg/template-yaml';
 
 interface Args extends ParsedArguments {
 	// Positional
@@ -17,6 +19,7 @@ interface Args extends ParsedArguments {
 
 	// Options
 	remote: string | null;
+	templatize: boolean | null;
 	verbose: boolean;
 
 	// Placeholder variables
@@ -36,6 +39,7 @@ export class CreateCommand extends Command {
 	override options: CommandOption[] = [
 		options.remoteUrl(),
 		options.verbose(),
+		options.templatize(),
 		options.org(),
 		options.license(),
 	];
@@ -76,11 +80,11 @@ export class CreateCommand extends Command {
 		}
 
 		// Ask for input
-		while (!argv.org) {
+		while (!argv.templatize && !argv.org) {
 			argv.org = await this.ask('Enter organization name: ');
 		}
 
-		while (!argv.license) {
+		while (!argv.templatize && !argv.license) {
 			argv.license = await this.ask('Enter license name: ');
 		}
 
@@ -112,9 +116,32 @@ export class CreateCommand extends Command {
 		utils.mergeTemplate({ runner: cmd, template, branch });
 
 		// Replace placeholders
-		utils.replacePlaceholder(cmd, 'project-name', name);
-		utils.replacePlaceholder(cmd, 'organization', argv.org ?? '');
-		utils.replacePlaceholder(cmd, 'license', argv.license ?? '');
+		if (argv.templatize) {
+			let access = await this.ask(
+				'Enter template access level (private/public): '
+			);
+
+			if (access !== '' && access !== 'private' && access !== 'public') {
+				throw new Error('Invalid access level');
+			}
+
+			if (access === '') {
+				access = 'private';
+			}
+
+			utils.writeTemplateYaml(cmd.dir, {
+				projectName: name,
+				organization: argv.org ?? '',
+				license: argv.license ?? 'MIT',
+				access: access as 'private' | 'public',
+				roots: [argv.remote ? argv.remote : template.name],
+			});
+		}
+		else {
+			utils.replacePlaceholder(cmd, 'project-name', name);
+			utils.replacePlaceholder(cmd, 'organization', argv.org ?? '');
+			utils.replacePlaceholder(cmd, 'license', argv.license ?? '');
+		}
 
 		// Commit changes
 		const templateName =
