@@ -145,6 +145,6 @@ export class CreateCommand extends Command {
 		const templateName =
 			template.name && template.name !== 'remote' ? template.name : remote;
 		utils.stage(cmd);
-		utils.commit(cmd, `Project created using remrg (${templateName})`);
+		utils.commit(cmd, `project created using remrg (${templateName})`);
 	}
 }

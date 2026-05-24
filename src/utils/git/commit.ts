@@ -7,7 +7,7 @@ import { CommandRunner } from 'ts-script';
  * @param message Commit message
  */
 export function commit(runner: CommandRunner, message: string): void {
-	runner.run(`git commit -m "${message}"`, {
+	runner.run(`git commit -m "[remrg] ${message}"`, {
 		loadingDescription: 'Committing changes',
 	});
 }
