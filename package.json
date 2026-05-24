@@ -1,7 +1,7 @@
 {
 	"name": "@remrg/cli",
 	"version": "1.0.0",
-	"description": "",
+	"description": "remrg cli",
 	"author": "remrg",
 	"license": "AGPL",
 	"bin": {
@@ -56,5 +56,13 @@
 		"dist",
 		"LICENSE.md",
 		"README.md"
+	],
+	"keywords": [
+		"template",
+		"typescript template",
+		"remrg",
+		"remerge",
+		"scaffold",
+		"boilerplate"
 	]
 }
