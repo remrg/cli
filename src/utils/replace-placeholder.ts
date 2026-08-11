@@ -17,7 +17,7 @@ export function replacePlaceholder(
 		() => {
 			replaceInFileSync({
 				files: runner.dir + '/**/*',
-				glob: { dot: false },
+				glob: { dot: true },
 				from: new RegExp('{{ remrg:var ' + key + ' }}', 'g'),
 				to: val,
 			});
