@@ -139,6 +139,12 @@ export class CreateCommand extends Command {
 			utils.replacePlaceholder(cmd, 'project-name', name);
 			utils.replacePlaceholder(cmd, 'organization', argv.org ?? '');
 			utils.replacePlaceholder(cmd, 'license', argv.license ?? '');
+
+			utils.writePlaceholdersYaml(cmd.dir, {
+				name: name,
+				organization: argv.org ?? '',
+				license: argv.license ?? '',
+			});
 		}
 
 		// Commit changes
