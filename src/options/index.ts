@@ -5,3 +5,4 @@ export { org } from './org';
 export { remoteUrl } from './remote-url';
 export { templatize } from './templatize';
 export { verbose } from './verbose';
+export { branch } from './branch';
