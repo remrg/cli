@@ -68,7 +68,7 @@ export class UpdateCommand extends Command {
 
 			utils.mergeTemplate({
 				runner: cmd,
-				template,
+				template: argv.branch ? { ...template, branch: argv.branch } : template,
 				branch: argv.branch || template.branch || 'main',
 				isExistingProject: true,
 			});
