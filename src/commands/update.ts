@@ -34,15 +34,7 @@ export class UpdateCommand extends Command {
 			verbose: argv.verbose,
 		});
 
-		let sortedTemplates: string[];
-		try {
-			sortedTemplates = utils.getTemplateLineage(cmd.dir);
-		}
-		catch (e) {
-			const err = e as Error;
-			log.error(err.message);
-			return; // Or throw depending on preference. Logging and returning is safe here.
-		}
+		const sortedTemplates: string[] = utils.getTemplateLineage(cmd.dir);
 
 		if (sortedTemplates.length === 0) {
 			log.info('No templates installed to update.');
