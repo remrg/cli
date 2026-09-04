@@ -36,7 +36,7 @@ describe('loadInstalledTemplateNames', () => {
 		expect(result).toEqual(['template-a', 'template-b']);
 	});
 
-	it('returns empty array if no templates exists', () => {
+	it('returns empty array if no templates exist', () => {
 		const remrgDir = join(tmpDir, '.remrg');
 		const installedDir = join(remrgDir, 'installed');
 
