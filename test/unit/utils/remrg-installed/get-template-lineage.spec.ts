@@ -23,8 +23,8 @@ describe('getTemplateLineage', () => {
 		mkdirSync(templateDir, { recursive: true });
 
 		const yamlContent = `
-projectName: ${name}
-organization: org
+name: org/${name}
+version: 1.0.0
 roots: ${roots.length > 0 ? '\n' + roots.map((r) => `  - ${r}`).join('\n') : '[]'}
 `;
 		writeFileSync(join(templateDir, 'remrg.yml'), yamlContent);

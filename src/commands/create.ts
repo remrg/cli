@@ -128,8 +128,8 @@ export class CreateCommand extends Command {
 			}
 
 			utils.writeTemplateYaml(cmd.dir, {
-				projectName: name,
-				organization: argv.org ?? '',
+				name: `${argv.org ?? ''}${argv.org ? '/' : ''}${name}`,
+				version: '1.0.0',
 				license: argv.license ?? 'MIT',
 				access: access as 'private' | 'public',
 				roots: [argv.remote ? argv.remote : template.name],

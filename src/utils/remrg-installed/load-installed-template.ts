@@ -23,5 +23,35 @@ export function loadInstalledTemplate(
 	}
 
 	const content = readFileSync(yamlPath, 'utf8');
-	return yaml.load(content) as TemplateYamlOptions;
+	const defaultOptions: TemplateYamlOptions = {
+		name: '',
+		roots: [],
+	};
+
+	try {
+		const loaded = yaml.load(content);
+		const options = typeof loaded === 'object' && loaded !== null ? loaded : {};
+
+		if (
+			!('name' in options) ||
+			!options['name'] ||
+			typeof options['name'] !== 'string'
+		) {
+			throw new Error('Template name is missing in remrg.yml');
+		}
+
+		return {
+			...defaultOptions,
+			...options,
+			name: options.name,
+			roots: Array.isArray((options as Partial<TemplateYamlOptions>).roots)
+				? ((options as Partial<TemplateYamlOptions>).roots as unknown[]).filter(
+						(root): root is string => typeof root === 'string'
+					)
+				: [],
+		};
+	}
+	catch {
+		return defaultOptions;
+	}
 }

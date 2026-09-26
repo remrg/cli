@@ -29,7 +29,7 @@ describe('loadInstalledTemplates', () => {
 		mkdirSync(templateADir);
 		writeFileSync(
 			join(templateADir, 'remrg.yml'),
-			'projectName: template-a\norganization: org\nroots:\n  - base'
+			'name: org/template-a\nversion: 1.0.0\nroots:\n  - base'
 		);
 
 		// Template B without YAML
@@ -41,6 +41,9 @@ describe('loadInstalledTemplates', () => {
 		expect(result).toHaveLength(2);
 		expect(result.find((r) => r.name === 'template-a')?.options?.roots).toEqual(
 			['base']
+		);
+		expect(result.find((r) => r.name === 'template-a')?.options?.name).toBe(
+			'org/template-a'
 		);
 		expect(
 			result.find((r) => r.name === 'template-b')?.options
