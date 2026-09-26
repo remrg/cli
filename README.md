@@ -27,3 +27,14 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 - `--verbose` Verbose logs
 - `--org` Specify the organization
 - `--license` Specify the license name
+
+### Add a template
+
+```bash
+remrg add [TEMPLATE]
+```
+
+#### Options
+
+- `--branch` Specify the template branch
+- `--verbose` Verbose logs
