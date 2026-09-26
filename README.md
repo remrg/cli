@@ -28,6 +28,19 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 - `--org` Specify the organization
 - `--license` Specify the license name
 
+### Update templates
+
+```bash
+remrg update
+```
+
+Updates all templates installed in the current project, in dependency order. Templates that are not available in the remote cache are skipped. If no templates are installed, the command exits without making changes.
+
+#### Options
+
+- `--branch` Specify the branch to use for all installed templates instead of each template's configured branch
+- `--verbose`, `-v` Enable verbose logs
+
 ### Add a template
 
 ```bash
