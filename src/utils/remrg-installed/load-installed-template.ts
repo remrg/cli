@@ -51,7 +51,7 @@ export function loadInstalledTemplate(
 				: [],
 		};
 	}
-	catch {
-		return defaultOptions;
+	catch (error) {
+		throw new Error(`Invalid template manifest: ${yamlPath}`, { cause: error });
 	}
 }
