@@ -86,7 +86,7 @@ version: 2.0.0
 		expect(result?.roots).toEqual([]);
 	});
 
-	it('returns a safe default when remrg.yml is empty or malformed', () => {
+	it('throws an error when remrg.yml is empty or malformed', () => {
 		const remrgDir = join(tmpDir, '.remrg');
 		const installedDir = join(remrgDir, 'installed');
 		const templateDir = join(installedDir, 'bad-template');
@@ -96,11 +96,8 @@ version: 2.0.0
 		mkdirSync(templateDir);
 		writeFileSync(join(templateDir, 'remrg.yml'), '');
 
-		const result = loadInstalledTemplate(tmpDir, 'bad-template');
-
-		expect(result).toEqual({
-			name: '',
-			roots: [],
-		});
+		expect(() => loadInstalledTemplate(tmpDir, 'bad-template')).toThrow(
+			`Invalid template manifest: ${join(templateDir, 'remrg.yml')}`
+		);
 	});
 });
