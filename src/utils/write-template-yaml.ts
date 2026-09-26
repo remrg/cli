@@ -6,12 +6,15 @@ export function writeTemplateYaml(
 	dir: string,
 	options: TemplateYamlOptions
 ): void {
-	mkdirSync(path.join(dir, `.remrg/installed/${options.projectName}`), {
+	// Extract project name from "org/project" format
+	const projectName = options.name.split('/').pop() || options.name;
+
+	mkdirSync(path.join(dir, `.remrg/installed/${projectName}`), {
 		recursive: true,
 	});
 
 	writeFileSync(
-		path.join(dir, `.remrg/installed/${options.projectName}/remrg.yml`),
+		path.join(dir, `.remrg/installed/${projectName}/remrg.yml`),
 		getTemplateYaml(options)
 	);
 }
