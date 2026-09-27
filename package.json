@@ -10,7 +10,7 @@
 	"scripts": {
 		"start": "node dist/src/index.js",
 		"prepare": "npm run build",
-		"build": "tsc -p tsconfig.build.json",
+		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
 		"dev": "cross-env NODE_ENV=development tsx watch src/",
 		"typecheck": "tsc -p tsconfig.json --noEmit",
 		"lint": "eslint . --fix && prettier --write .",
@@ -49,6 +49,7 @@
 		"globals": "^17.6.0",
 		"prettier": "^3.8.1",
 		"prettier-plugin-brace-style": "^0.10.1",
+		"tsc-alias": "^1.9.2",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.1.2"

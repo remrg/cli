@@ -6,7 +6,7 @@ Thank you for your interest in contributing to this project! We welcome contribu
 
 ### Setting Up Your Development Environment
 
-Use the [Setup Guide](./docs/guides/setup.md) to setup your environment.
+Use the [Setup Guide](./docs/contributing/setup.md) to setup your environment.
 
 ## Development Workflow
 

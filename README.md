@@ -22,6 +22,14 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 
 #### Options
 
+## Getting Started
+
+Read the [Getting Started Guide](./docs/guides/getting-started.md) to get started.
+
+## License
+
+Licensed under the [{{ remrg:var license }}](LICENSE.md).
+
 - `--remote` Specify a remote URL. Use `remote` as the template name while using the `--remote` option
 - `--templatize` Create a template project
 - `--verbose` Verbose logs
