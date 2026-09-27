@@ -45,7 +45,10 @@ export class UpdateCommand extends Command {
 
 		log.info(`Plan: ${sortedTemplates.join(' -> ')}`);
 
-		// For each template in order, merge it
+		// Fetch everything up front so redundant merges can be detected before
+		// any commit is created
+		const fetched: utils.FetchedTemplate[] = [];
+
 		for (const templateName of sortedTemplates) {
 			const template = getCachedTemplate(templateName);
 
@@ -56,16 +59,36 @@ export class UpdateCommand extends Command {
 				continue;
 			}
 
-			log.info(`Merging updates from ${templateName}...`);
+			fetched.push(
+				utils.fetchTemplate({
+					runner: cmd,
+					template: argv.branch
+						? { ...template, branch: argv.branch }
+						: template,
+					branch: argv.branch || template.branch || 'main',
+				})
+			);
+		}
 
-			utils.mergeTemplate({
-				runner: cmd,
-				template: argv.branch ? { ...template, branch: argv.branch } : template,
-				branch: argv.branch || template.branch || 'main',
-				isExistingProject: true,
-			});
+		try {
+			const pending = utils.pruneRedundantTemplates(cmd, fetched);
 
-			log.info(`Successfully merged ${templateName}`);
+			if (pending.length === 0) {
+				log.info('Already up to date.');
+				return;
+			}
+
+			log.info(
+				`Merging ${pending.map((t) => t.name).join(', ')} ` +
+					`(${fetched.length - pending.length} already up to date).`
+			);
+
+			utils.mergeFetchedTemplates(cmd, pending);
+		}
+		finally {
+			for (const template of fetched) {
+				utils.removeTemplateRemote(cmd, template.remoteName);
+			}
 		}
 
 		log.info('Update complete!');

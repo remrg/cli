@@ -1,10 +1,16 @@
 export { commit } from './git/commit';
 export { configUser } from './git/config-user';
+export { fetchTemplate, removeTemplateRemote } from './fetch-template';
 export { initProject } from './git/init-project';
+export { isAncestor } from './git/is-ancestor';
 export { isGitConfigured } from './git/is-git-configured';
+export { mergeFetchedTemplates } from './merge-fetched-templates';
 export * from './remrg-installed';
 export { mergeTemplate } from './merge-template';
+export { pruneRedundantTemplates } from './prune-redundant-templates';
 export { replacePlaceholder } from './replace-placeholder';
+export { revParse } from './git/rev-parse';
 export { stage } from './git/stage';
 export { writePlaceholdersYaml } from './write-placeholders-yaml';
 export { writeTemplateYaml } from './write-template-yaml';
+export type { FetchedTemplate } from './fetch-template';
