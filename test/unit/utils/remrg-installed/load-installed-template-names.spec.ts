@@ -36,6 +36,17 @@ describe('loadInstalledTemplateNames', () => {
 		expect(result).toEqual(['template-a', 'template-b']);
 	});
 
+	it('expands scoped @org folders into @org/template names', () => {
+		const installedDir = join(tmpDir, '.remrg', 'installed');
+
+		mkdirSync(join(installedDir, '@org', 'template-b'), { recursive: true });
+		mkdirSync(join(installedDir, 'template-a'));
+
+		const result = loadInstalledTemplateNames(tmpDir);
+
+		expect(result).toEqual(['@org/template-b', 'template-a']);
+	});
+
 	it('returns empty array if no templates exist', () => {
 		const remrgDir = join(tmpDir, '.remrg');
 		const installedDir = join(remrgDir, 'installed');

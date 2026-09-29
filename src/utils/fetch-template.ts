@@ -29,7 +29,7 @@ export function fetchTemplate(options: {
 }): FetchedTemplate {
 	const { runner, template } = options;
 	const branch = template.branch || options.branch || 'main';
-	const remoteName = `remrg-${template.name}`;
+	const remoteName = `remrg-${template.name.replace(/[^\w.-]/g, '-')}`;
 
 	const remotes = execSync('git remote', { cwd: runner.dir })
 		.toString()
