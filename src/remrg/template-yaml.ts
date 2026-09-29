@@ -5,6 +5,7 @@
 export interface TemplateYamlOptions {
 	name: string; // e.g., "remrg/base-code"
 	track?: string;
+	url?: string; // Git URI (HTTPS or SSH) for third-party templates
 	version?: string;
 	description?: string;
 	type?: string;
@@ -15,7 +16,7 @@ export interface TemplateYamlOptions {
 
 export function getTemplateYaml(options: TemplateYamlOptions): string {
 	return `name: ${options.name}
-${options.track ? `track: ${options.track}\n` : ''}
+${options.track ? `track: ${options.track}\n` : ''}${options.url ? `url: ${options.url}\n` : ''}
 version: ${options.version ?? '1.0.0'}
 description: ${options.description ?? ''}
 type: ${options.type ?? 'feature'}

@@ -50,6 +50,23 @@ export class UpdateCommand extends Command {
 		const fetched: utils.FetchedTemplate[] = [];
 
 		for (const templateName of sortedTemplates) {
+			const source = utils.getInstalledTemplateSource(
+				templateName,
+				utils.loadInstalledTemplate(cmd.dir, templateName)
+			);
+
+			if (source) {
+				fetched.push(
+					utils.fetchTemplate({
+						runner: cmd,
+						template: source,
+						branch: source.branch,
+					})
+				);
+
+				continue;
+			}
+
 			const template = getCachedTemplate(templateName);
 
 			if (!template) {
