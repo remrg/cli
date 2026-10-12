@@ -22,6 +22,12 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 
 #### Options
 
+- `--remote` Specify a remote URL. Use `remote` as the template name while using the `--remote` option
+- `--templatize` Create a template project
+- `--verbose` Verbose logs
+- `--org` Specify the organization
+- `--license` Specify the license name
+
 ## Getting Started
 
 Read the [Getting Started Guide](./docs/guides/getting-started.md) to get started.
@@ -30,11 +36,21 @@ Read the [Getting Started Guide](./docs/guides/getting-started.md) to get starte
 
 Licensed under the [{{ remrg:var license }}](LICENSE.md).
 
-- `--remote` Specify a remote URL. Use `remote` as the template name while using the `--remote` option
-- `--templatize` Create a template project
-- `--verbose` Verbose logs
-- `--org` Specify the organization
-- `--license` Specify the license name
+### Initialize remrg in an existing project
+
+```bash
+remrg init [TEMPLATE]
+```
+
+Initializes remrg in an existing Git repository that was not created with remrg.
+Run the command from the repository root.
+
+#### Options
+
+- `--branch` Specify the template branch
+- `--org` Specify the organization placeholder value
+- `--license` Specify the license placeholder value
+- `--verbose`, `-v` Enable verbose logs
 
 ### Update templates
 
