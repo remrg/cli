@@ -17,6 +17,7 @@ interface Args extends ParsedArguments {
 	branch: string | null;
 	org: string | null;
 	license: string | null;
+	remote: string | null;
 }
 
 /**
@@ -33,6 +34,7 @@ export class InitCommand extends Command {
 		options.branch(),
 		options.org(),
 		options.license(),
+		options.remoteUrl(),
 	];
 
 	override async handle(argv: Args): Promise<void> {
@@ -46,9 +48,22 @@ export class InitCommand extends Command {
 			log: log as any,
 			verbose: argv.verbose,
 		});
-		const template = getCachedTemplate(argv.template);
+		let template =
+			argv.template === 'remote' ? undefined : getCachedTemplate(argv.template);
+
+		if (argv.template === 'remote' && argv.remote) {
+			template = {
+				name: 'remote',
+				url: argv.remote,
+				branch: argv.branch || 'main',
+			};
+		}
 
 		if (!template) {
+			if (argv.template === 'remote') {
+				throw new Error('Either a template or remote URL must be provided');
+			}
+
 			throw new Error(`Template "${argv.template}" not found`);
 		}
 
@@ -85,7 +100,17 @@ export class InitCommand extends Command {
 			isExistingProject: true,
 		});
 
-		this.validateInstalledTemplate(cmd.dir, template.name);
+		const installedTemplateName =
+			template.name === 'remote'
+				? utils.loadInstalledTemplateNames(cmd.dir)[0]
+				: template.name;
+		if (!installedTemplateName) {
+			throw new Error(
+				'Remote template lacks .remrg/installed metadata. ' +
+					'The repository may be partially initialized; resolve it manually.'
+			);
+		}
+		this.validateInstalledTemplate(cmd.dir, installedTemplateName);
 		utils.writePlaceholdersYaml(cmd.dir, {
 			name: path.basename(cmd.dir),
 			organization: argv.org ?? '',

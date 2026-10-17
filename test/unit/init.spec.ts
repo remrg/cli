@@ -83,6 +83,7 @@ describe('InitCommand', () => {
 		org: null,
 		license: null,
 		verbose: false,
+		remote: null,
 	};
 
 	const template = {
@@ -198,6 +199,40 @@ describe('InitCommand', () => {
 		await expect(new InitCommand().handle(args)).rejects.toThrow(
 			'Template "@remrg/base" not found'
 		);
+	});
+
+	it('initializes a remote template using the requested branch', async () => {
+		execFileSync('git', ['init', '-q'], { cwd: projectDir });
+		const remoteTemplate = {
+			name: 'remote',
+			url: 'https://example.com/template.git',
+			branch: 'next',
+		};
+		vi.mocked(utils.mergeTemplate).mockImplementationOnce(() => {
+			const manifestPath = path.join(
+				projectDir,
+				'.remrg/installed/remote-template/remrg.yml'
+			);
+			mkdirSync(path.dirname(manifestPath), { recursive: true });
+			writeFileSync(
+				manifestPath,
+				'name: remote-template\ntrack: branch/next\nroots: []\n'
+			);
+		});
+
+		await new InitCommand().handle({
+			...args,
+			template: 'remote',
+			remote: remoteTemplate.url,
+			branch: 'next',
+		});
+
+		expect(utils.mergeTemplate).toHaveBeenCalledWith({
+			runner: expect.objectContaining({ dir: projectDir }),
+			template: remoteTemplate,
+			branch: 'next',
+			isExistingProject: true,
+		});
 	});
 
 	it('initializes then updates a Git project from its template', async () => {
