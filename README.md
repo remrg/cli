@@ -44,10 +44,12 @@ remrg init [TEMPLATE]
 
 Initializes remrg in an existing Git repository that was not created with remrg.
 Run the command from the repository root.
+Use `remote` as the template name with `--remote` to initialize from a Git URL.
 
 #### Options
 
 - `--branch` Specify the template branch
+- `--remote` Specify a remote URL/path; use `remote` as the template name
 - `--org` Specify the organization placeholder value
 - `--license` Specify the license placeholder value
 - `--verbose`, `-v` Enable verbose logs
