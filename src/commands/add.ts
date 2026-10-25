@@ -11,6 +11,7 @@ interface Args extends ParsedArguments {
 	template: string;
 	verbose: boolean;
 	branch: string | null;
+	continue: boolean;
 }
 
 /**
@@ -22,7 +23,11 @@ export class AddCommand extends Command {
 
 	override positional: CommandOption[] = [options.template()];
 
-	override options: CommandOption[] = [options.verbose(), options.branch()];
+	override options: CommandOption[] = [
+		options.verbose(),
+		options.branch(),
+		options.continueMerge(),
+	];
 
 	override async handle(argv: Args): Promise<void> {
 		const log = new Log({
@@ -41,12 +46,19 @@ export class AddCommand extends Command {
 			throw new Error(`Template "${argv.template}" not found`);
 		}
 
-		utils.mergeTemplate({
-			runner: cmd,
-			template: argv.branch ? { ...template, branch: argv.branch } : template,
-			branch: argv.branch || template.branch || 'main',
-			isExistingProject: true,
-		});
+		const branch = argv.branch || template.branch || 'main';
+		if (argv.continue) {
+			utils.validateTemplateContinuation(cmd.dir, template.name, branch);
+			utils.removeTemplateRemote(cmd, `remrg-${template.name}`);
+		}
+		else {
+			utils.mergeTemplate({
+				runner: cmd,
+				template: argv.branch ? { ...template, branch: argv.branch } : template,
+				branch,
+				isExistingProject: true,
+			});
+		}
 
 		log.info(`Added template ${template.name}.`);
 	}
