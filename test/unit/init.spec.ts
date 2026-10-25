@@ -13,6 +13,7 @@ import path from 'path';
 import * as yaml from 'js-yaml';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { InitCommand } from '../../src/commands/init';
+import { AddCommand } from '../../src/commands/add';
 import { UpdateCommand } from '../../src/commands/update';
 import { getCachedTemplate } from '../../src/host';
 import * as utils from '../../src/utils';
@@ -78,6 +79,7 @@ describe('InitCommand', () => {
 	});
 
 	const args = {
+		continue: false,
 		template: '@remrg/base',
 		branch: null,
 		org: null,
@@ -288,6 +290,194 @@ describe('InitCommand', () => {
 		expect(readFileSync(path.join(projectDir, 'template.txt'), 'utf8')).toBe(
 			'version two\n'
 		);
+	});
+
+	describe.each(['init', 'add'] as const)('%s --continue', (commandName) => {
+		const command = () =>
+			commandName === 'init' ? new InitCommand() : new AddCommand();
+
+		async function interruptMerge(remote = false) {
+			templateDir = mkdtempSync(path.join(tmpdir(), 'remrg-conflict-'));
+			const localTemplate = {
+				name: 'conflict-template',
+				url: templateDir,
+				branch: 'next',
+			};
+			state.cachedNames = [localTemplate.name];
+			vi.mocked(getCachedTemplate).mockReturnValue(localTemplate);
+			initializeGitRepository(templateDir);
+			git(templateDir, 'checkout', '-b', 'next');
+			const manifestDir = path.join(
+				templateDir,
+				'.remrg/installed',
+				localTemplate.name
+			);
+			mkdirSync(manifestDir, { recursive: true });
+			writeFileSync(
+				path.join(manifestDir, 'remrg.yml'),
+				`name: ${localTemplate.name}\ntrack: branch/next\nroots: []\n`
+			);
+			writeFileSync(path.join(templateDir, 'conflict.txt'), 'template\n');
+			commitAll(templateDir, 'template');
+
+			initializeGitRepository(projectDir);
+			writeFileSync(path.join(projectDir, 'conflict.txt'), 'project\n');
+			commitAll(projectDir, 'project');
+
+			const resumeArgs = {
+				...args,
+				template: remote ? 'remote' : localTemplate.name,
+				remote: remote ? templateDir : null,
+				branch: 'next',
+				org: 'example',
+				license: 'MIT',
+				continue: true,
+			};
+			vi.mocked(utils.mergeTemplate).mockImplementationOnce(mergeTemplateImpl);
+			await expect(
+				command().handle({ ...resumeArgs, continue: false })
+			).rejects.toThrow();
+			expect(existsSync(path.join(projectDir, '.git/MERGE_HEAD'))).toBe(true);
+			return resumeArgs;
+		}
+
+		it('resumes committed merges without fetching or merging', async () => {
+			const resumeArgs = await interruptMerge();
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'Resolve all merge conflicts and commit'
+			);
+
+			const mergeHeadPath = path.join(projectDir, '.git/MERGE_HEAD');
+			const mergeHead = readFileSync(mergeHeadPath);
+			rmSync(mergeHeadPath);
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'Resolve all merge conflicts and commit'
+			);
+			writeFileSync(mergeHeadPath, mergeHead);
+
+			writeFileSync(path.join(projectDir, 'conflict.txt'), 'resolved\n');
+			git(projectDir, 'add', '.');
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'Resolve all merge conflicts and commit'
+			);
+
+			git(projectDir, 'commit', '-m', 'resolved template merge');
+			vi.mocked(utils.mergeTemplate).mockClear();
+			// The remote is unavailable: continuation must not fetch it again.
+			rmSync(templateDir!, { recursive: true, force: true });
+			await command().handle(resumeArgs);
+
+			expect(utils.mergeTemplate).not.toHaveBeenCalled();
+			expect(readFileSync(path.join(projectDir, 'conflict.txt'), 'utf8')).toBe(
+				'resolved\n'
+			);
+			expect(
+				utils.loadInstalledTemplate(projectDir, resumeArgs.template)
+			).toMatchObject({
+				name: resumeArgs.template,
+				track: 'branch/next',
+			});
+			expect(
+				execFileSync('git', ['remote'], {
+					cwd: projectDir,
+					encoding: 'utf8',
+				}).trim()
+			).toBe('');
+			if (commandName === 'init') {
+				expect(
+					yaml.load(
+						readFileSync(
+							path.join(projectDir, '.remrg/placeholders.yaml'),
+							'utf8'
+						)
+					)
+				).toEqual({
+					name: path.basename(projectDir),
+					organization: 'example',
+					license: 'MIT',
+				});
+			}
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'No completed template merge found'
+			);
+		});
+
+		it('rejects continuation without prior template state', async () => {
+			initializeGitRepository(projectDir);
+			vi.mocked(getCachedTemplate).mockReturnValue(template);
+			await expect(
+				command().handle({ ...args, continue: true })
+			).rejects.toThrow('No completed template merge found');
+			expect(utils.mergeTemplate).not.toHaveBeenCalled();
+		});
+
+		it('rejects aborted merges even with a fetched remote', async () => {
+			const resumeArgs = await interruptMerge();
+			git(projectDir, 'merge', '--abort');
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'No completed template merge found'
+			);
+		});
+
+		it('retains recovery state if merged metadata is missing', async () => {
+			const resumeArgs = await interruptMerge();
+			writeFileSync(path.join(projectDir, 'conflict.txt'), 'resolved\n');
+			rmSync(path.join(projectDir, '.remrg'), { recursive: true });
+			commitAll(projectDir, 'resolved without metadata');
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'Cannot continue: .remrg/installed metadata is missing'
+			);
+			expect(
+				execFileSync('git', ['remote'], { cwd: projectDir, encoding: 'utf8' })
+			).toContain(`remrg-${resumeArgs.template}`);
+		});
+
+		it('requires the original branch and matching installed manifest', async () => {
+			const resumeArgs = await interruptMerge();
+			writeFileSync(path.join(projectDir, 'conflict.txt'), 'resolved\n');
+			commitAll(projectDir, 'resolved');
+			await expect(
+				command().handle({ ...resumeArgs, branch: 'wrong' })
+			).rejects.toThrow('Use the original template and --branch options');
+			rmSync(
+				path.join(
+					projectDir,
+					'.remrg/installed',
+					resumeArgs.template,
+					'remrg.yml'
+				)
+			);
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'installed manifest for "conflict-template" is missing'
+			);
+			writeFileSync(
+				path.join(
+					projectDir,
+					'.remrg/installed',
+					resumeArgs.template,
+					'remrg.yml'
+				),
+				'roots: []\n'
+			);
+			await expect(command().handle(resumeArgs)).rejects.toThrow(
+				'Invalid template manifest'
+			);
+		});
+
+		if (commandName === 'init') {
+			it('continues a remote template using its installed name', async () => {
+				const resumeArgs = await interruptMerge(true);
+				writeFileSync(path.join(projectDir, 'conflict.txt'), 'resolved\n');
+				commitAll(projectDir, 'resolved');
+				await command().handle(resumeArgs);
+				expect(
+					existsSync(path.join(projectDir, '.remrg/placeholders.yaml'))
+				).toBe(true);
+				expect(utils.loadInstalledTemplateNames(projectDir)).toEqual([
+					'conflict-template',
+				]);
+			});
+		}
 	});
 });
 

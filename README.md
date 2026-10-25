@@ -52,6 +52,7 @@ Use `remote` as the template name with `--remote` to initialize from a Git URL.
 - `--remote` Specify a remote URL/path; use `remote` as the template name
 - `--org` Specify the organization placeholder value
 - `--license` Specify the license placeholder value
+- `--continue` Complete initialization after resolving and committing a template merge
 - `--verbose`, `-v` Enable verbose logs
 
 ### Update templates
@@ -76,4 +77,21 @@ remrg add [TEMPLATE]
 #### Options
 
 - `--branch` Specify the template branch
+- `--continue` Complete an interrupted template merge after resolving and committing conflicts
 - `--verbose` Verbose logs
+
+If `init` or `add` stops on merge conflicts, resolve the conflicted files, stage
+them with `git add`, and commit the merge. Then rerun the same command with
+`--continue`, preserving the original template and options (including `--branch`,
+`--remote`, `--org`, and `--license` when used):
+
+```bash
+remrg init [TEMPLATE] --continue
+remrg add [TEMPLATE] --continue
+```
+
+Continuation skips fetching and merging, validates the merged installed-template
+manifest, and finishes command metadata and cleanup. Keep the temporary
+`remrg-<template>` Git remote until continuation succeeds; it identifies the
+interrupted merge. An aborted merge cannot be continued. `update --continue` is
+not supported.

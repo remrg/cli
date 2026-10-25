@@ -32,6 +32,7 @@ describe('AddCommand', () => {
 		vi.mocked(getCachedTemplate).mockReturnValue(template);
 
 		await new AddCommand().handle({
+			continue: false,
 			template: template.name,
 			branch: null,
 			verbose: false,
@@ -54,6 +55,7 @@ describe('AddCommand', () => {
 		vi.mocked(getCachedTemplate).mockReturnValue(template);
 
 		await new AddCommand().handle({
+			continue: false,
 			template: template.name,
 			branch: 'next',
 			verbose: false,
@@ -72,6 +74,7 @@ describe('AddCommand', () => {
 
 		await expect(
 			new AddCommand().handle({
+				continue: false,
 				template: 'missing',
 				branch: null,
 				verbose: false,

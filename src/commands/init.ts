@@ -18,6 +18,7 @@ interface Args extends ParsedArguments {
 	org: string | null;
 	license: string | null;
 	remote: string | null;
+	continue: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ export class InitCommand extends Command {
 		options.org(),
 		options.license(),
 		options.remoteUrl(),
+		options.continueMerge(),
 	];
 
 	override async handle(argv: Args): Promise<void> {
@@ -86,19 +88,26 @@ export class InitCommand extends Command {
 		}
 
 		const branch = argv.branch || template.branch || 'main';
-		if (existsSync(path.join(cmd.dir, '.remrg'))) {
+		if (!argv.continue && existsSync(path.join(cmd.dir, '.remrg'))) {
 			throw new Error(
 				'This repository already contains .remrg metadata. ' +
-					'Use "remrg add" to add another template.'
+					'Use "remrg add" to add another template, or "remrg init ' +
+					`${argv.template} --continue" after resolving and committing ` +
+					'an interrupted merge.'
 			);
 		}
 
-		utils.mergeTemplate({
-			runner: cmd,
-			template: { ...template, branch },
-			branch,
-			isExistingProject: true,
-		});
+		if (argv.continue) {
+			utils.validateTemplateContinuation(cmd.dir, template.name, branch);
+		}
+		else {
+			utils.mergeTemplate({
+				runner: cmd,
+				template: { ...template, branch },
+				branch,
+				isExistingProject: true,
+			});
+		}
 
 		const installedTemplateName =
 			template.name === 'remote'
@@ -116,6 +125,10 @@ export class InitCommand extends Command {
 			organization: argv.org ?? '',
 			license: argv.license ?? '',
 		});
+
+		if (argv.continue) {
+			utils.removeTemplateRemote(cmd, `remrg-${template.name}`);
+		}
 
 		log.info(`Initialized remrg using template ${template.name}.`);
 	}

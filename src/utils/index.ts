@@ -11,6 +11,7 @@ export { pruneRedundantTemplates } from './prune-redundant-templates';
 export { replacePlaceholder } from './replace-placeholder';
 export { revParse } from './git/rev-parse';
 export { stage } from './git/stage';
+export { validateTemplateContinuation } from './validate-template-continuation';
 export { writePlaceholdersYaml } from './write-placeholders-yaml';
 export { writeTemplateYaml } from './write-template-yaml';
 export type { FetchedTemplate } from './fetch-template';
