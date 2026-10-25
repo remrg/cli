@@ -13,6 +13,8 @@ import path from 'path';
 import * as yaml from 'js-yaml';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { InitCommand } from '../../src/commands/init';
+import { AddCommand } from '../../src/commands/add';
+import { CreateCommand } from '../../src/commands/create';
 import { UpdateCommand } from '../../src/commands/update';
 import { getCachedTemplate } from '../../src/host';
 import * as utils from '../../src/utils';
@@ -55,6 +57,16 @@ vi.mock('../../src/utils', async (importOriginal) => {
 	return {
 		...utils,
 		mergeTemplate: vi.fn(),
+		initProject: (...[runner, name]: Parameters<typeof utils.initProject>) => {
+			utils.initProject(runner, name);
+			git(path.join(runner.dir, name), 'config', 'user.name', 'Remrg Test');
+			git(
+				path.join(runner.dir, name),
+				'config',
+				'user.email',
+				'remrg-test@example.com'
+			);
+		},
 	};
 });
 
@@ -130,7 +142,10 @@ describe('InitCommand', () => {
 			branch: 'next',
 			isExistingProject: true,
 		});
-		expect(readFileSync(manifestPath, 'utf8')).toBe(manifest);
+		expect(yaml.load(readFileSync(manifestPath, 'utf8'))).toEqual({
+			...(yaml.load(manifest) as object),
+			track: 'branch/next',
+		});
 		expect(utils.loadInstalledTemplateNames(projectDir)).toEqual([
 			template.name,
 		]);
@@ -235,60 +250,118 @@ describe('InitCommand', () => {
 		});
 	});
 
-	it('initializes then updates a Git project from its template', async () => {
-		templateDir = mkdtempSync(path.join(tmpdir(), 'remrg-template-'));
-		const localTemplate = {
-			name: 'integration-template',
-			url: templateDir,
-			branch: 'main',
-		};
-		state.cachedNames = [localTemplate.name];
-		vi.mocked(getCachedTemplate).mockReturnValue(localTemplate);
+	it.each([
+		['init', null],
+		['init', 'next'],
+		['add', null],
+		['add', 'next'],
+		['create', null],
+		['create', 'next'],
+	])(
+		'%s tracks its initial branch (%s) on update',
+		async (command, override) => {
+			templateDir = mkdtempSync(path.join(tmpdir(), 'remrg-template-'));
+			const localTemplate = {
+				name: 'integration-template',
+				url: templateDir,
+				branch: 'stable',
+			};
+			state.cachedNames = [localTemplate.name];
+			vi.mocked(getCachedTemplate).mockReturnValue(localTemplate);
 
-		initializeGitRepository(templateDir);
-		const manifestDir = path.join(
-			templateDir,
-			'.remrg/installed',
-			localTemplate.name
-		);
-		mkdirSync(manifestDir, { recursive: true });
-		writeFileSync(
-			path.join(manifestDir, 'remrg.yml'),
-			`name: ${localTemplate.name}\ntrack: branch/main\nroots: []\n`
-		);
-		writeFileSync(path.join(templateDir, 'template.txt'), 'version one\n');
-		commitAll(templateDir, 'template v1');
+			initializeGitRepository(templateDir);
+			const manifestDir = path.join(
+				templateDir,
+				'.remrg/installed',
+				localTemplate.name
+			);
+			mkdirSync(manifestDir, { recursive: true });
+			writeFileSync(
+				path.join(manifestDir, 'remrg.yml'),
+				`name: ${localTemplate.name}\ntrack: branch/legacy\ncustom: preserved\nroots: []\n`
+			);
+			writeFileSync(path.join(templateDir, 'template.txt'), 'version one\n');
+			commitAll(templateDir, 'template v1');
+			git(templateDir, 'branch', 'stable');
+			git(templateDir, 'checkout', '-b', 'next');
+			writeFileSync(
+				path.join(templateDir, 'template.txt'),
+				'next version one\n'
+			);
+			commitAll(templateDir, 'next v1');
+			git(templateDir, 'checkout', override || 'stable');
 
-		initializeGitRepository(projectDir);
-		writeFileSync(path.join(projectDir, 'project.txt'), 'existing project\n');
-		commitAll(projectDir, 'existing project');
+			initializeGitRepository(projectDir);
+			writeFileSync(path.join(projectDir, 'project.txt'), 'existing project\n');
+			commitAll(projectDir, 'existing project');
 
-		vi.mocked(utils.mergeTemplate).mockImplementationOnce((options) =>
-			mergeTemplateImpl(options)
-		);
-		await new InitCommand().handle({
-			...args,
-			template: localTemplate.name,
-		});
+			vi.mocked(utils.mergeTemplate).mockImplementationOnce((options) =>
+				mergeTemplateImpl(options)
+			);
+			const installArgs = {
+				...args,
+				template: localTemplate.name,
+				branch: override,
+			};
+			if (command === 'create') {
+				// Keep the generated repository inside the test's temporary directory.
+				await new CreateCommand().handle({
+					...installArgs,
+					name: 'created',
+					org: 'example',
+					license: 'MIT',
+					templatize: false,
+				});
+				state.dir = path.join(projectDir, 'created');
+			}
+			else if (command === 'add') {
+				await new AddCommand().handle(installArgs);
+			}
+			else {
+				await new InitCommand().handle(installArgs);
+			}
 
-		expect(utils.loadInstalledTemplateNames(projectDir)).toContain(
-			localTemplate.name
-		);
-		expect(readFileSync(path.join(projectDir, 'template.txt'), 'utf8')).toBe(
-			'version one\n'
-		);
-		expect(existsSync(path.join(projectDir, '.remrg/placeholders.yaml'))).toBe(
-			true
-		);
+			const installedDir = state.dir;
+			expect(utils.loadInstalledTemplateNames(installedDir)).toContain(
+				localTemplate.name
+			);
+			expect(
+				readFileSync(path.join(installedDir, 'template.txt'), 'utf8')
+			).toBe(override ? 'next version one\n' : 'version one\n');
+			expect(
+				utils.loadInstalledTemplate(installedDir, localTemplate.name)
+			).toMatchObject({
+				track: `branch/${override || 'stable'}`,
+				custom: 'preserved',
+			});
+			commitAll(installedDir, 'persist installation metadata');
 
-		writeFileSync(path.join(templateDir, 'template.txt'), 'version two\n');
-		commitAll(templateDir, 'template v2');
-		await new UpdateCommand().handle({ verbose: false, branch: null });
+			// A cache default change must not redirect an installed template.
+			vi.mocked(getCachedTemplate).mockReturnValue({
+				...localTemplate,
+				branch: 'main',
+			});
+			if (command === 'add') {
+				vi.mocked(utils.mergeTemplate).mockImplementationOnce(
+					mergeTemplateImpl
+				);
+				await new AddCommand().handle({
+					...installArgs,
+					branch: null,
+				});
+				expect(utils.mergeTemplate).toHaveBeenLastCalledWith(
+					expect.objectContaining({ branch: override || 'stable' })
+				);
+			}
+			writeFileSync(path.join(templateDir, 'template.txt'), 'version two\n');
+			commitAll(templateDir, 'template v2');
+			await new UpdateCommand().handle({ verbose: false, branch: null });
 
-		expect(readFileSync(path.join(projectDir, 'template.txt'), 'utf8')).toBe(
-			'version two\n'
-		);
-	});
+			expect(
+				readFileSync(path.join(installedDir, 'template.txt'), 'utf8')
+			).toBe('version two\n');
+		}
+	);
 });
 
 function initializeGitRepository(dir: string): void {
@@ -299,7 +372,7 @@ function initializeGitRepository(dir: string): void {
 
 function commitAll(dir: string, message: string): void {
 	git(dir, 'add', '.');
-	git(dir, 'commit', '-m', message);
+	git(dir, 'commit', '--allow-empty', '-m', message);
 }
 
 function git(dir: string, ...args: string[]): void {

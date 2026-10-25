@@ -86,6 +86,11 @@ export class InitCommand extends Command {
 		}
 
 		const branch = argv.branch || template.branch || 'main';
+		utils.getInstalledTemplateBranch(template.name, {
+			name: template.name,
+			roots: [],
+			track: `branch/${branch}`,
+		});
 		if (existsSync(path.join(cmd.dir, '.remrg'))) {
 			throw new Error(
 				'This repository already contains .remrg metadata. ' +
@@ -111,6 +116,7 @@ export class InitCommand extends Command {
 			);
 		}
 		this.validateInstalledTemplate(cmd.dir, installedTemplateName);
+		utils.recordInstalledTemplateBranch(cmd.dir, template, branch);
 		utils.writePlaceholdersYaml(cmd.dir, {
 			name: path.basename(cmd.dir),
 			organization: argv.org ?? '',

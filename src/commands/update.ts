@@ -50,17 +50,21 @@ export class UpdateCommand extends Command {
 		const fetched: utils.FetchedTemplate[] = [];
 
 		for (const templateName of sortedTemplates) {
-			const source = utils.getInstalledTemplateSource(
-				templateName,
-				utils.loadInstalledTemplate(cmd.dir, templateName)
-			);
+			const manifest = utils.loadInstalledTemplate(cmd.dir, templateName);
+			const source = utils.getInstalledTemplateSource(templateName, manifest);
 
 			if (source) {
+				const branch = argv.branch || source.branch;
+				utils.getInstalledTemplateBranch(templateName, {
+					name: templateName,
+					roots: [],
+					track: `branch/${branch}`,
+				});
 				fetched.push(
 					utils.fetchTemplate({
 						runner: cmd,
-						template: source,
-						branch: source.branch,
+						template: { ...source, branch },
+						branch,
 					})
 				);
 
@@ -76,13 +80,21 @@ export class UpdateCommand extends Command {
 				continue;
 			}
 
+			const branch =
+				argv.branch ||
+				utils.getInstalledTemplateBranch(templateName, manifest) ||
+				template.branch ||
+				'main';
+			utils.getInstalledTemplateBranch(templateName, {
+				name: templateName,
+				roots: [],
+				track: `branch/${branch}`,
+			});
 			fetched.push(
 				utils.fetchTemplate({
 					runner: cmd,
-					template: argv.branch
-						? { ...template, branch: argv.branch }
-						: template,
-					branch: argv.branch || template.branch || 'main',
+					template: { ...template, branch },
+					branch,
 				})
 			);
 		}

@@ -6,6 +6,8 @@ import * as utils from '../utils';
 import * as options from '../options';
 import { Command, CommandOption, ParsedArguments } from 'ts-commands';
 import { getCachedTemplate } from '../host';
+import { existsSync } from 'fs';
+import path from 'path';
 
 interface Args extends ParsedArguments {
 	template: string;
@@ -41,12 +43,29 @@ export class AddCommand extends Command {
 			throw new Error(`Template "${argv.template}" not found`);
 		}
 
+		const installed = existsSync(
+			path.join(cmd.dir, '.remrg', 'installed', template.name, 'remrg.yml')
+		)
+			? utils.loadInstalledTemplate(cmd.dir, template.name)
+			: undefined;
+		const branch =
+			argv.branch ||
+			utils.getInstalledTemplateBranch(template.name, installed) ||
+			template.branch ||
+			'main';
+		utils.getInstalledTemplateBranch(template.name, {
+			name: template.name,
+			roots: [],
+			track: `branch/${branch}`,
+		});
+
 		utils.mergeTemplate({
 			runner: cmd,
-			template: argv.branch ? { ...template, branch: argv.branch } : template,
-			branch: argv.branch || template.branch || 'main',
+			template: { ...template, branch },
+			branch,
 			isExistingProject: true,
 		});
+		utils.recordInstalledTemplateBranch(cmd.dir, template, branch);
 
 		log.info(`Added template ${template.name}.`);
 	}
