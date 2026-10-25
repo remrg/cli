@@ -86,6 +86,7 @@ export class InitCommand extends Command {
 		}
 
 		const branch = argv.branch || template.branch || 'main';
+		utils.validateTemplateBranch(template.name, branch);
 		if (existsSync(path.join(cmd.dir, '.remrg'))) {
 			throw new Error(
 				'This repository already contains .remrg metadata. ' +
@@ -100,17 +101,10 @@ export class InitCommand extends Command {
 			isExistingProject: true,
 		});
 
-		const installedTemplateName =
-			template.name === 'remote'
-				? utils.loadInstalledTemplateNames(cmd.dir)[0]
-				: template.name;
-		if (!installedTemplateName) {
-			throw new Error(
-				'Remote template lacks .remrg/installed metadata. ' +
-					'The repository may be partially initialized; resolve it manually.'
-			);
+		if (template.name !== 'remote') {
+			this.validateInstalledTemplate(cmd.dir, template.name);
 		}
-		this.validateInstalledTemplate(cmd.dir, installedTemplateName);
+		utils.recordInstalledTemplateBranch(cmd.dir, template, branch);
 		utils.writePlaceholdersYaml(cmd.dir, {
 			name: path.basename(cmd.dir),
 			organization: argv.org ?? '',

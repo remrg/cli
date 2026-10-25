@@ -17,6 +17,7 @@ interface Args extends ParsedArguments {
 
 	// Options
 	remote: string | null;
+	branch: string | null;
 	templatize: boolean | null;
 	verbose: boolean;
 
@@ -36,6 +37,7 @@ export class CreateCommand extends Command {
 
 	override options: CommandOption[] = [
 		options.remoteUrl(),
+		options.branch(),
 		options.verbose(),
 		options.templatize(),
 		options.org(),
@@ -56,7 +58,6 @@ export class CreateCommand extends Command {
 
 		let template: Template;
 		const name = argv.name;
-		const branch = 'main'; // TODO: Add option for branch
 		const remote = argv.remote;
 
 		if (argv.template && argv.template !== 'remote') {
@@ -70,7 +71,7 @@ export class CreateCommand extends Command {
 			template = {
 				name: 'remote',
 				url: remote,
-				branch: branch,
+				branch: argv.branch || 'main',
 			};
 		}
 		else {
@@ -111,7 +112,14 @@ export class CreateCommand extends Command {
 		}
 
 		// Merge the template
-		utils.mergeTemplate({ runner: cmd, template, branch });
+		const branch = argv.branch || template.branch || 'main';
+		utils.validateTemplateBranch(template.name, branch);
+		utils.mergeTemplate({
+			runner: cmd,
+			template: { ...template, branch },
+			branch,
+		});
+		utils.recordInstalledTemplateBranch(cmd.dir, template, branch);
 
 		// Replace placeholders
 		if (argv.templatize) {

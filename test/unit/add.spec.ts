@@ -15,7 +15,11 @@ vi.mock('../../src/host', () => ({
 
 vi.mock('../../src/utils', async (importOriginal) => {
 	const utils = await importOriginal<typeof import('../../src/utils')>();
-	return { ...utils, mergeTemplate: vi.fn() };
+	return {
+		...utils,
+		mergeTemplate: vi.fn(),
+		recordInstalledTemplateBranch: vi.fn(),
+	};
 });
 
 describe('AddCommand', () => {
@@ -43,6 +47,11 @@ describe('AddCommand', () => {
 			branch: 'main',
 			isExistingProject: true,
 		});
+		expect(utils.recordInstalledTemplateBranch).toHaveBeenCalledWith(
+			'/project',
+			template,
+			'main'
+		);
 	});
 
 	it('uses the requested branch', async () => {
@@ -65,6 +74,11 @@ describe('AddCommand', () => {
 			branch: 'next',
 			isExistingProject: true,
 		});
+		expect(utils.recordInstalledTemplateBranch).toHaveBeenCalledWith(
+			'/project',
+			template,
+			'next'
+		);
 	});
 
 	it('throws when the template is not cached', async () => {
