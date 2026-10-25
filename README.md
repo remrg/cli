@@ -34,7 +34,7 @@ remrg create [TEMPLATE] [PROJECT_NAME]
 - After installation, the selected branch is recorded in that template's installed `.remrg/installed/<template>/remrg.yml`. This replaces any template-provided `track` with the branch actually merged; all other manifest fields, including custom fields and lineage, are preserved. Other installed templates are not changed. Commit the metadata changes made by `add` or `init` along with your project changes; `create` commits them automatically.
 - `update` uses the installed manifest's URL when present, otherwise the cached URL. Branch precedence is `--branch`, installed `track`, then the cached default (or `main` for manifests with a URL), then `main`. Existing manifests are not rewritten or automatically migrated by `update`; a manifest without `track` keeps its previous fallback behavior.
 - `update --branch` is a one-time override for all templates and does not change recorded tracking. To persistently switch branches, use `add --branch` or edit the installed manifest.
-- Remote URL installations must contain exactly one installed template so tracking can be recorded unambiguously. A missing or ambiguous manifest causes an error after merging and may require manual cleanup. If its manifest lacks a URL, the installation URL is recorded as well.
+- Remote URL installations must have a unique top-level installed template (one not referenced by another installed template's `roots`) so tracking can be recorded unambiguously. Dependency manifests are left unchanged. Missing or ambiguous metadata causes an error after merging and may require manual cleanup. If the top-level manifest lacks a URL, the installation URL is recorded as well.
 - `--org` Specify the organization
 - `--license` Specify the license name
 

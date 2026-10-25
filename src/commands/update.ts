@@ -55,11 +55,7 @@ export class UpdateCommand extends Command {
 
 			if (source) {
 				const branch = argv.branch || source.branch;
-				utils.getInstalledTemplateBranch(templateName, {
-					name: templateName,
-					roots: [],
-					track: `branch/${branch}`,
-				});
+				utils.validateTemplateBranch(templateName, branch);
 				fetched.push(
 					utils.fetchTemplate({
 						runner: cmd,
@@ -85,11 +81,7 @@ export class UpdateCommand extends Command {
 				utils.getInstalledTemplateBranch(templateName, manifest) ||
 				template.branch ||
 				'main';
-			utils.getInstalledTemplateBranch(templateName, {
-				name: templateName,
-				roots: [],
-				track: `branch/${branch}`,
-			});
+			utils.validateTemplateBranch(templateName, branch);
 			fetched.push(
 				utils.fetchTemplate({
 					runner: cmd,

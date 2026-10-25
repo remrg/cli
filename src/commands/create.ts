@@ -113,11 +113,7 @@ export class CreateCommand extends Command {
 
 		// Merge the template
 		const branch = argv.branch || template.branch || 'main';
-		utils.getInstalledTemplateBranch(template.name, {
-			name: template.name,
-			roots: [],
-			track: `branch/${branch}`,
-		});
+		utils.validateTemplateBranch(template.name, branch);
 		utils.mergeTemplate({
 			runner: cmd,
 			template: { ...template, branch },

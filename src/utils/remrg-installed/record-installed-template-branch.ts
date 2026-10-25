@@ -14,13 +14,22 @@ export function recordInstalledTemplateBranch(
 	let name = template.name;
 	if (name === 'remote') {
 		const names = loadInstalledTemplateNames(dir);
-		if (names.length !== 1) {
+		const roots = new Set(
+			names.flatMap(
+				(installedName) =>
+					loadInstalledTemplate(dir, installedName)?.roots ?? []
+			)
+		);
+		const candidates = names.filter(
+			(installedName) => !roots.has(installedName)
+		);
+		if (candidates.length !== 1) {
 			throw new Error(
 				'Cannot identify the remote template manifest to record its branch. ' +
-					'Expected exactly one installed template.'
+					'Expected exactly one top-level installed template.'
 			);
 		}
-		name = names[0]!;
+		name = candidates[0]!;
 	}
 
 	const manifest = loadInstalledTemplate(dir, name);
@@ -29,7 +38,7 @@ export function recordInstalledTemplateBranch(
 	}
 	const track = `branch/${branch}`;
 	const url =
-		name !== template.name && !manifest.url ? template.url : undefined;
+		template.name === 'remote' && !manifest.url ? template.url : undefined;
 	if (manifest.track === track && !url) {
 		return;
 	}

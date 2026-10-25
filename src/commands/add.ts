@@ -53,11 +53,7 @@ export class AddCommand extends Command {
 			utils.getInstalledTemplateBranch(template.name, installed) ||
 			template.branch ||
 			'main';
-		utils.getInstalledTemplateBranch(template.name, {
-			name: template.name,
-			roots: [],
-			track: `branch/${branch}`,
-		});
+		utils.validateTemplateBranch(template.name, branch);
 
 		utils.mergeTemplate({
 			runner: cmd,

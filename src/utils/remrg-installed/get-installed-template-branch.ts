@@ -1,11 +1,17 @@
 import { TemplateYamlOptions } from '../../remrg';
 
+export function validateTemplateBranch(name: string, branch: string): void {
+	if (!/^\w[\w.-]*(?:\/[\w.-]+)*$/.test(branch)) {
+		throw new Error(`Invalid branch for template "${name}": ${branch}`);
+	}
+}
+
 export function getInstalledTemplateBranch(
 	name: string,
 	options?: TemplateYamlOptions
 ): string | undefined {
 	const track = options?.track;
-	if (track == null) {
+	if (track === undefined || track === null) {
 		return undefined;
 	}
 
@@ -17,9 +23,7 @@ export function getInstalledTemplateBranch(
 	}
 
 	const branch = track.slice('branch/'.length);
-	if (!/^\w[\w.-]*(?:\/[\w.-]+)*$/.test(branch)) {
-		throw new Error(`Invalid branch for template "${name}": ${branch}`);
-	}
+	validateTemplateBranch(name, branch);
 
 	return branch;
 }

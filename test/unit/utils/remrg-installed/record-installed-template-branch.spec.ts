@@ -83,7 +83,28 @@ describe('installed branch tracking', () => {
 				{ ...template, name: 'remote' },
 				'next'
 			)
-		).toThrow('Expected exactly one installed template');
+		).toThrow('Expected exactly one top-level installed template');
+	});
+
+	it('records the top-level remote template without changing dependency tracking', () => {
+		const parent = writeManifest(
+			'parent',
+			'name: parent\ntrack: branch/main\n'
+		);
+		const filename = writeManifest(
+			'remote',
+			'name: remote\nroots: [parent]\ntrack: branch/main\n'
+		);
+		recordInstalledTemplateBranch(dir, { ...template, name: 'remote' }, 'next');
+		expect(yaml.load(readFileSync(filename, 'utf8'))).toEqual({
+			name: 'remote',
+			roots: ['parent'],
+			track: 'branch/next',
+			url: template.url,
+		});
+		expect(readFileSync(parent, 'utf8')).toBe(
+			'name: parent\ntrack: branch/main\n'
+		);
 	});
 
 	it('rejects a missing template manifest', () => {
