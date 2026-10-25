@@ -34,8 +34,9 @@ export function mergeTemplate(options: {
 		.toString()
 		.split('\n')
 		.map((r) => r.trim());
+	const remoteExists = remotes.includes(remoteName);
 
-	if (remotes.includes(remoteName)) {
+	if (remoteExists) {
 		runner.log.warn(
 			`Remote "${remoteName}" already exists, skipping adding remote`
 		);
@@ -46,25 +47,42 @@ export function mergeTemplate(options: {
 		});
 	}
 
-	runner.run(`git fetch ${remoteName} ${branch}`, {
-		loadingDescription: 'Fetching',
-	});
-
-	if (isExistingProject) {
-		runner.run(
-			`git merge ${remoteName}/${branch} --allow-unrelated-histories`,
-			{
-				loadingDescription: 'Merging',
-			}
-		);
-	}
-	else {
-		runner.run(`git pull ${remoteName} ${branch} --allow-unrelated-histories`, {
-			loadingDescription: 'Pulling',
+	let cleanupFailure: { error: unknown } | undefined;
+	try {
+		runner.run(`git fetch ${remoteName} ${branch}`, {
+			loadingDescription: 'Fetching',
 		});
-	}
 
-	runner.run(`git remote remove ${remoteName}`, {
-		loadingDescription: 'Cleaning up',
-	});
+		if (isExistingProject) {
+			runner.run(
+				`git merge ${remoteName}/${branch} --allow-unrelated-histories`,
+				{
+					loadingDescription: 'Merging',
+				}
+			);
+		}
+		else {
+			runner.run(
+				`git pull ${remoteName} ${branch} --allow-unrelated-histories`,
+				{
+					loadingDescription: 'Pulling',
+				}
+			);
+		}
+	}
+	finally {
+		if (!remoteExists) {
+			try {
+				runner.run(`git remote remove ${remoteName}`, {
+					loadingDescription: 'Cleaning up',
+				});
+			}
+			catch (error) {
+				cleanupFailure = { error };
+			}
+		}
+	}
+	if (cleanupFailure) {
+		throw cleanupFailure.error;
+	}
 }
