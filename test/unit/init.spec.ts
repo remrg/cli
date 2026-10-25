@@ -84,6 +84,7 @@ describe('InitCommand', () => {
 		license: null,
 		verbose: false,
 		remote: null,
+		continue: false,
 	};
 
 	const template = {
@@ -289,6 +290,212 @@ describe('InitCommand', () => {
 			'version two\n'
 		);
 	});
+
+	it('preserves conflicts until the user finishes the merge', async () => {
+		const localTemplate = prepareRecoveryRepositories();
+		writeFileSync(path.join(templateDir!, 'shared.txt'), 'template\n');
+		commitAll(templateDir!, 'conflicting template');
+		writeFileSync(path.join(projectDir, 'shared.txt'), 'project\n');
+		commitAll(projectDir, 'project work');
+		writeFileSync(path.join(projectDir, 'project.txt'), 'uncommitted work\n');
+		writeFileSync(path.join(projectDir, 'untracked.txt'), 'keep me\n');
+		const originalHead = readGit('rev-parse', 'HEAD');
+		const initArgs = { ...args, template: localTemplate.name };
+		vi.mocked(utils.mergeTemplate).mockImplementation(mergeTemplateImpl);
+
+		await expect(new InitCommand().handle(initArgs)).rejects.toThrow(
+			'No changes have been rolled back'
+		);
+		const conflict = readFileSync(path.join(projectDir, 'shared.txt'), 'utf8');
+		const mergeHead = readGit('rev-parse', 'MERGE_HEAD');
+		expect(conflict).toContain('<<<<<<<');
+		expect(readGit('rev-parse', 'HEAD')).toBe(originalHead);
+		const status = readGit('status', '--porcelain');
+		expect(status).toContain(' M project.txt');
+		expect(status).toContain('?? untracked.txt');
+
+		for (const continuation of [false, true]) {
+			await expect(
+				new InitCommand().handle({ ...initArgs, continue: continuation })
+			).rejects.toThrow('Resolve conflicts and finish any merge');
+			expect(readGit('status', '--porcelain')).toBe(status);
+			expect(readGit('rev-parse', 'MERGE_HEAD')).toBe(mergeHead);
+			expect(readFileSync(path.join(projectDir, 'shared.txt'), 'utf8')).toBe(
+				conflict
+			);
+		}
+
+		writeFileSync(path.join(projectDir, 'shared.txt'), 'resolved by user\n');
+		git(projectDir, 'add', 'shared.txt');
+		await expect(
+			new InitCommand().handle({ ...initArgs, continue: true })
+		).rejects.toThrow('An unfinished merge');
+		git(projectDir, 'commit', '-m', 'resolve init merge');
+		const resolvedHead = readGit('rev-parse', 'HEAD');
+		await new InitCommand().handle({
+			...initArgs,
+			continue: true,
+			org: 'example',
+		});
+
+		expect(utils.mergeTemplate).toHaveBeenCalledTimes(1);
+		expect(readGit('rev-parse', 'HEAD')).toBe(resolvedHead);
+		expect(readFileSync(path.join(projectDir, 'project.txt'), 'utf8')).toBe(
+			'uncommitted work\n'
+		);
+		expect(readFileSync(path.join(projectDir, 'untracked.txt'), 'utf8')).toBe(
+			'keep me\n'
+		);
+		expect(
+			readFileSync(path.join(projectDir, '.remrg/placeholders.yaml'), 'utf8')
+		).toContain('example');
+	});
+
+	it.each(['missing', 'invalid'])(
+		'recovers from a %s installed manifest without merging again',
+		async (failure) => {
+			const localTemplate = prepareRecoveryRepositories();
+			const manifestPath = path.join(
+				projectDir,
+				'.remrg/installed',
+				localTemplate.name,
+				'remrg.yml'
+			);
+			const templateManifest = path.join(
+				templateDir!,
+				'.remrg/installed',
+				localTemplate.name,
+				'remrg.yml'
+			);
+			if (failure === 'missing') {
+				rmSync(templateManifest);
+				writeFileSync(
+					path.join(path.dirname(templateManifest), 'README.txt'),
+					'Manifest missing\n'
+				);
+			}
+			else {
+				writeFileSync(templateManifest, 'name: [invalid\n');
+			}
+			commitAll(templateDir!, 'broken metadata');
+			const originalHead = readGit('rev-parse', 'HEAD');
+			const initArgs = { ...args, template: localTemplate.name };
+			vi.mocked(utils.mergeTemplate).mockImplementation(mergeTemplateImpl);
+
+			await expect(new InitCommand().handle(initArgs)).rejects.toThrow(
+				'then rerun the same init command with --continue'
+			);
+			const mergedHead = readGit('rev-parse', 'HEAD');
+			expect(mergedHead).not.toBe(originalHead);
+			expect(readGit('show', 'HEAD:project.txt')).toBe('existing project\n');
+			expect(readGit('show', 'HEAD:template.txt')).toBe('template work\n');
+			expect(
+				existsSync(path.join(projectDir, '.remrg/placeholders.yaml'))
+			).toBe(false);
+
+			await expect(new InitCommand().handle(initArgs)).rejects.toThrow(
+				'--continue'
+			);
+			await expect(
+				new InitCommand().handle({ ...initArgs, continue: true })
+			).rejects.toThrow('repair .remrg/installed manifests');
+			expect(readGit('rev-parse', 'HEAD')).toBe(mergedHead);
+
+			mkdirSync(path.dirname(manifestPath), { recursive: true });
+			const manifest =
+				`name: ${localTemplate.name}\n` + 'track: branch/main\nroots: []\n';
+			writeFileSync(manifestPath, manifest);
+			await new InitCommand().handle({
+				...initArgs,
+				continue: true,
+				org: 'recovered',
+				license: 'MIT',
+			});
+			const placeholders = readFileSync(
+				path.join(projectDir, '.remrg/placeholders.yaml'),
+				'utf8'
+			);
+			expect(yaml.load(placeholders)).toEqual({
+				name: path.basename(projectDir),
+				organization: 'recovered',
+				license: 'MIT',
+			});
+			await new InitCommand().handle({
+				...initArgs,
+				continue: true,
+				org: 'different',
+			});
+			expect(
+				readFileSync(path.join(projectDir, '.remrg/placeholders.yaml'), 'utf8')
+			).toBe(placeholders);
+			expect(readFileSync(manifestPath, 'utf8')).toBe(manifest);
+			expect(readGit('rev-parse', 'HEAD')).toBe(mergedHead);
+			expect(utils.mergeTemplate).toHaveBeenCalledTimes(1);
+		}
+	);
+
+	it('rejects continuation without installed metadata without writing files', async () => {
+		initializeGitRepository(projectDir);
+		vi.mocked(getCachedTemplate).mockReturnValue(template);
+		await expect(
+			new InitCommand().handle({ ...args, continue: true })
+		).rejects.toThrow('repair .remrg/installed manifests');
+		expect(utils.mergeTemplate).not.toHaveBeenCalled();
+		expect(existsSync(path.join(projectDir, '.remrg'))).toBe(false);
+	});
+
+	it('preserves staged and untracked work when Git refuses to merge', async () => {
+		const localTemplate = prepareRecoveryRepositories();
+		writeFileSync(path.join(projectDir, 'project.txt'), 'staged work\n');
+		git(projectDir, 'add', 'project.txt');
+		writeFileSync(path.join(projectDir, 'untracked.txt'), 'untracked work\n');
+		const head = readGit('rev-parse', 'HEAD');
+		const status = readGit('status', '--porcelain');
+		const staged = readGit('diff', '--cached');
+		vi.mocked(utils.mergeTemplate).mockImplementation(mergeTemplateImpl);
+
+		await expect(
+			new InitCommand().handle({ ...args, template: localTemplate.name })
+		).rejects.toThrow('No changes have been rolled back');
+		expect(readGit('rev-parse', 'HEAD')).toBe(head);
+		expect(readGit('status', '--porcelain')).toBe(status);
+		expect(readGit('diff', '--cached')).toBe(staged);
+		expect(readFileSync(path.join(projectDir, 'untracked.txt'), 'utf8')).toBe(
+			'untracked work\n'
+		);
+	});
+
+	function prepareRecoveryRepositories() {
+		templateDir = mkdtempSync(path.join(tmpdir(), 'remrg-recovery-template-'));
+		const localTemplate = {
+			name: 'recovery-template',
+			url: templateDir,
+			branch: 'main',
+		};
+		state.cachedNames = [localTemplate.name];
+		vi.mocked(getCachedTemplate).mockReturnValue(localTemplate);
+		initializeGitRepository(templateDir);
+		const manifestDir = path.join(
+			templateDir,
+			'.remrg/installed',
+			localTemplate.name
+		);
+		mkdirSync(manifestDir, { recursive: true });
+		writeFileSync(
+			path.join(manifestDir, 'remrg.yml'),
+			`name: ${localTemplate.name}\ntrack: branch/main\nroots: []\n`
+		);
+		writeFileSync(path.join(templateDir, 'template.txt'), 'template work\n');
+		commitAll(templateDir, 'template');
+		initializeGitRepository(projectDir);
+		writeFileSync(path.join(projectDir, 'project.txt'), 'existing project\n');
+		commitAll(projectDir, 'existing project');
+		return localTemplate;
+	}
+
+	function readGit(...args: string[]): string {
+		return execFileSync('git', args, { cwd: projectDir, encoding: 'utf8' });
+	}
 });
 
 function initializeGitRepository(dir: string): void {

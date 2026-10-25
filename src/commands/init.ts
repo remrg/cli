@@ -5,7 +5,12 @@ import path from 'path';
 import { CommandRunner } from 'ts-script';
 import { Log } from 'ts-tiny-log';
 import { LogLevel } from 'ts-tiny-log/levels';
-import { Command, CommandOption, ParsedArguments } from 'ts-commands';
+import {
+	Command,
+	CommandOption,
+	OptionType,
+	ParsedArguments,
+} from 'ts-commands';
 
 import * as options from '../options';
 import * as utils from '../utils';
@@ -18,7 +23,16 @@ interface Args extends ParsedArguments {
 	org: string | null;
 	license: string | null;
 	remote: string | null;
+	continue: boolean;
 }
+
+const recoveryGuidance =
+	'No changes have been rolled back. Inspect "git status". ' +
+	'Resolve conflicts and finish any merge with "git add <resolved-files>" ' +
+	'and "git commit"; repair .remrg/installed manifests if needed, ' +
+	'then rerun the same init command with --continue. ' +
+	'For completion and manual rollback steps, see ' +
+	'https://github.com/remrg/cli#recovering-an-interrupted-init.';
 
 /**
  * Initialize remrg in an existing Git repository
@@ -35,6 +49,12 @@ export class InitCommand extends Command {
 		options.org(),
 		options.license(),
 		options.remoteUrl(),
+		{
+			key: 'continue',
+			type: OptionType.boolean,
+			description:
+				'Finish an interrupted init without merging the template again',
+		},
 	];
 
 	override async handle(argv: Args): Promise<void> {
@@ -86,36 +106,64 @@ export class InitCommand extends Command {
 		}
 
 		const branch = argv.branch || template.branch || 'main';
-		if (existsSync(path.join(cmd.dir, '.remrg'))) {
+		const mergeHead = execFileSync(
+			'git',
+			['rev-parse', '--git-path', 'MERGE_HEAD'],
+			{ cwd: cmd.dir, encoding: 'utf8' }
+		).trim();
+		const unmerged = execFileSync('git', ['ls-files', '--unmerged'], {
+			cwd: cmd.dir,
+			encoding: 'utf8',
+		}).trim();
+		if (existsSync(path.resolve(cmd.dir, mergeHead)) || unmerged) {
+			throw new Error(
+				'An unfinished merge or unresolved conflicts remain. ' +
+					recoveryGuidance
+			);
+		}
+
+		if (!argv.continue && existsSync(path.join(cmd.dir, '.remrg'))) {
 			throw new Error(
 				'This repository already contains .remrg metadata. ' +
-					'Use "remrg add" to add another template.'
+					'Use "remrg add" to add another template. ' +
+					'If a previous init failed, use --continue after repairing it. ' +
+					recoveryGuidance
 			);
 		}
 
-		utils.mergeTemplate({
-			runner: cmd,
-			template: { ...template, branch },
-			branch,
-			isExistingProject: true,
-		});
+		try {
+			if (!argv.continue) {
+				utils.mergeTemplate({
+					runner: cmd,
+					template: { ...template, branch },
+					branch,
+					isExistingProject: true,
+				});
+			}
 
-		const installedTemplateName =
-			template.name === 'remote'
-				? utils.loadInstalledTemplateNames(cmd.dir)[0]
-				: template.name;
-		if (!installedTemplateName) {
-			throw new Error(
-				'Remote template lacks .remrg/installed metadata. ' +
-					'The repository may be partially initialized; resolve it manually.'
-			);
+			const installedTemplateName =
+				template.name === 'remote'
+					? utils.loadInstalledTemplateNames(cmd.dir)[0]
+					: template.name;
+			if (!installedTemplateName) {
+				throw new Error('Remote template lacks .remrg/installed metadata.');
+			}
+			this.validateInstalledTemplate(cmd.dir, installedTemplateName);
+			if (
+				!argv.continue ||
+				!existsSync(path.join(cmd.dir, '.remrg/placeholders.yaml'))
+			) {
+				utils.writePlaceholdersYaml(cmd.dir, {
+					name: path.basename(cmd.dir),
+					organization: argv.org ?? '',
+					license: argv.license ?? '',
+				});
+			}
 		}
-		this.validateInstalledTemplate(cmd.dir, installedTemplateName);
-		utils.writePlaceholdersYaml(cmd.dir, {
-			name: path.basename(cmd.dir),
-			organization: argv.org ?? '',
-			license: argv.license ?? '',
-		});
+		catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new Error(`${message}\n${recoveryGuidance}`, { cause: error });
+		}
 
 		log.info(`Initialized remrg using template ${template.name}.`);
 	}
@@ -124,8 +172,7 @@ export class InitCommand extends Command {
 		const installedDir = path.join(dir, '.remrg', 'installed');
 		if (!existsSync(installedDir)) {
 			throw new Error(
-				`Template "${templateName}" lacks .remrg/installed metadata. ` +
-					'The repository may be partially initialized; resolve it manually.'
+				`Template "${templateName}" lacks .remrg/installed metadata.`
 			);
 		}
 
@@ -133,16 +180,14 @@ export class InitCommand extends Command {
 		if (!installedNames.includes(templateName)) {
 			throw new Error(
 				`Template "${templateName}" is not registered under ` +
-					'.remrg/installed and cannot be updated. ' +
-					'The repository may be partially initialized; resolve it manually.'
+					'.remrg/installed and cannot be updated.'
 			);
 		}
 
 		const manifest = utils.loadInstalledTemplate(dir, templateName);
 		if (!manifest) {
 			throw new Error(
-				`Template "${templateName}" lacks its .remrg/installed manifest. ` +
-					'The repository may be partially initialized; resolve it manually.'
+				`Template "${templateName}" lacks its .remrg/installed manifest.`
 			);
 		}
 	}
